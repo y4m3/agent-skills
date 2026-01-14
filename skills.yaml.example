@@ -4,3 +4,11 @@
 pr-check:
   # - ~/.claude/skills
   # - ~/repos/project/.claude/skills
+
+linear-issue:
+  # - ~/.claude/skills
+  # - ~/repos/project/.claude/skills
+
+start-work:
+  # - ~/.claude/skills
+  # - ~/repos/project/.claude/skills
