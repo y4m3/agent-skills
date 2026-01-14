@@ -11,7 +11,7 @@ Claude Code skills management monorepo.
 
 ```
 agent-skills/
-├── cli/                    # Skill management CLI (TypeScript)
+├── src/                    # Skill management CLI (TypeScript)
 │   └── src/
 │       ├── commands/       # CLI commands (list, sync, status)
 │       └── utils/          # Utilities (config, hash)

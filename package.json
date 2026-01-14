@@ -5,9 +5,9 @@
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
   },
-  "workspaces": ["cli"],
+  "workspaces": ["src"],
   "scripts": {
-    "build": "npm run build -w cli",
-    "skill": "npm run start -w cli --"
+    "build": "npm run build -w src",
+    "skill": "npm run start -w src --"
   }
 }

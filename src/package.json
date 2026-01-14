@@ -1,5 +1,5 @@
 {
-  "name": "@agent-skills/cli",
+  "name": "agent-skills-manager",
   "version": "1.0.0",
   "private": true,
   "engines": {
