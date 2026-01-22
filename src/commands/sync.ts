@@ -15,7 +15,6 @@ import {
   loadLockFile,
   saveLockFile,
   listAvailableComponents,
-  getComponentPath,
   calculateDirectoryHash,
   expandPath,
   type LockFile,
@@ -75,6 +74,80 @@ export const syncCommand = new Command("sync")
       console.log(`\u26a0 Component "${name}" not found in components/ directory`);
     }
 
+    // Delete components that were removed from config
+    const previousComponents = Object.keys(lock.components);
+    const currentComponents = config.components;
+    const removedComponents = previousComponents.filter(
+      (name) => !currentComponents.includes(name)
+    );
+
+    if (removedComponents.length > 0) {
+      for (const dest of config.destinations) {
+        const expandedDest = expandPath(dest);
+        const skillsDir = join(expandedDest, "skills");
+        const hooksDir = join(expandedDest, "hooks");
+        const rulesDir = join(expandedDest, "rules");
+
+        for (const name of removedComponents) {
+          const component = availableComponents.find((c) => c.name === name);
+
+          // Delete skills directory
+          const skillDir = join(skillsDir, name);
+          if (existsSync(skillDir)) {
+            if (options.dryRun) {
+              console.log(`  skills/${name}/: would delete`);
+            } else {
+              rmSync(skillDir, { recursive: true });
+              console.log(`  skills/${name}/: ✗ deleted`);
+            }
+            hasChanges = true;
+          }
+
+          // Delete hooks (if component info is available)
+          if (component?.hasHooks) {
+            const sourceHooksDir = join(component.path, "hooks");
+            if (existsSync(sourceHooksDir)) {
+              const hookFiles = readdirSync(sourceHooksDir);
+              for (const hookFile of hookFiles) {
+                const destPath = join(hooksDir, hookFile);
+                if (existsSync(destPath)) {
+                  if (options.dryRun) {
+                    console.log(`  hooks/${hookFile}: would delete`);
+                  } else {
+                    rmSync(destPath);
+                    console.log(`  hooks/${hookFile}: ✗ deleted`);
+                  }
+                  hasChanges = true;
+                }
+              }
+            }
+          }
+
+          // Delete rules (if component info is available)
+          if (component?.hasRules) {
+            const sourceRulesDir = join(component.path, "rules");
+            if (existsSync(sourceRulesDir)) {
+              const ruleFiles = readdirSync(sourceRulesDir).filter(
+                (f) => f.endsWith(".md") && !f.endsWith(".local.md")
+              );
+              for (const ruleFile of ruleFiles) {
+                const destPath = join(rulesDir, ruleFile);
+                if (existsSync(destPath)) {
+                  if (options.dryRun) {
+                    console.log(`  rules/${ruleFile}: would delete`);
+                  } else {
+                    rmSync(destPath);
+                    console.log(`  rules/${ruleFile}: ✗ deleted`);
+                  }
+                  hasChanges = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Process each destination
     for (const dest of config.destinations) {
       const expandedDest = expandPath(dest);
@@ -93,8 +166,6 @@ export const syncCommand = new Command("sync")
         const sourcePath = join(component.path, "SKILL.md");
         const destSkillDir = join(skillsDir, component.name);
         const destPath = join(destSkillDir, "SKILL.md");
-
-        const sourceHash = calculateDirectoryHash(join(component.path));
 
         if (!existsSync(destPath)) {
           if (options.dryRun) {
@@ -258,13 +329,14 @@ export const syncCommand = new Command("sync")
 
     // Update lock file
     for (const component of enabledComponents) {
+      const componentHash = calculateDirectoryHash(component.path);
       newLock.components[component.name] = {
-        source_hash: calculateDirectoryHash(component.path),
+        source_hash: componentHash,
         destinations: {},
       };
       for (const dest of config.destinations) {
         newLock.components[component.name].destinations[dest] = {
-          hash: calculateDirectoryHash(component.path),
+          hash: componentHash,
           status: "synced",
           synced_at: new Date().toISOString(),
         };
