@@ -82,11 +82,19 @@ export function loadConfig(): Config {
     return { components: [], destinations: [] };
   }
   const content = readFileSync(configPath, "utf-8");
-  const parsed = parseYaml(content) || {};
-  return {
-    components: parsed.components || [],
-    destinations: parsed.destinations || [],
-  };
+  const parsedRaw = parseYaml(content);
+  const parsed =
+    parsedRaw && typeof parsedRaw === "object" ? (parsedRaw as any) : {};
+
+  const components = Array.isArray(parsed.components)
+    ? parsed.components.filter((item: unknown) => typeof item === "string")
+    : [];
+
+  const destinations = Array.isArray(parsed.destinations)
+    ? parsed.destinations.filter((item: unknown) => typeof item === "string")
+    : [];
+
+  return { components, destinations };
 }
 
 export function loadLockFile(): LockFile {

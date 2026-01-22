@@ -107,7 +107,9 @@ export const syncCommand = new Command("sync")
           if (component?.hasHooks) {
             const sourceHooksDir = join(component.path, "hooks");
             if (existsSync(sourceHooksDir)) {
-              const hookFiles = readdirSync(sourceHooksDir);
+              const hookFiles = readdirSync(sourceHooksDir).filter((f) =>
+                f.endsWith(".sh")
+              );
               for (const hookFile of hookFiles) {
                 const destPath = join(hooksDir, hookFile);
                 if (existsSync(destPath)) {
@@ -201,7 +203,9 @@ export const syncCommand = new Command("sync")
         if (!component.hasHooks) continue;
 
         const sourceHooksDir = join(component.path, "hooks");
-        const hookFiles = readdirSync(sourceHooksDir);
+        const hookFiles = readdirSync(sourceHooksDir).filter((f) =>
+          f.endsWith(".sh")
+        );
 
         for (const hookFile of hookFiles) {
           const sourcePath = join(sourceHooksDir, hookFile);
@@ -308,7 +312,11 @@ export const syncCommand = new Command("sync")
 
       // Update settings.json with hooks
       const settingsPath = join(expandedDest, "settings.json");
-      const updatedSettings = updateSettingsWithHooks(settingsPath, allHooks);
+      const updatedSettings = updateSettingsWithHooks(
+        settingsPath,
+        allHooks,
+        hooksDir
+      );
 
       if (updatedSettings.changed) {
         if (options.dryRun) {
@@ -367,12 +375,16 @@ function generateClaudeMd(components: ComponentInfo[]): string {
   // Add rule references
   for (const component of components) {
     if (component.hasRules) {
-      const rulesDir = join(component.path, "rules");
-      const ruleFiles = readdirSync(rulesDir).filter(
-        (f) => f.endsWith(".md") && !f.endsWith(".local.md")
-      );
-      for (const ruleFile of ruleFiles) {
-        lines.push(`@rules/${ruleFile}`);
+      try {
+        const rulesDir = join(component.path, "rules");
+        const ruleFiles = readdirSync(rulesDir).filter(
+          (f) => f.endsWith(".md") && !f.endsWith(".local.md")
+        );
+        for (const ruleFile of ruleFiles) {
+          lines.push(`@rules/${ruleFile}`);
+        }
+      } catch {
+        // Skip if rules directory is not accessible
       }
     }
   }
@@ -382,7 +394,8 @@ function generateClaudeMd(components: ComponentInfo[]): string {
 
 function updateSettingsWithHooks(
   settingsPath: string,
-  hookFiles: string[]
+  hookFiles: string[],
+  hooksDir: string
 ): { settings: SettingsJson; changed: boolean } {
   let settings: SettingsJson = {};
 
@@ -407,7 +420,7 @@ function updateSettingsWithHooks(
   // Map hook files to their events
   for (const hookFile of hookFiles) {
     const hookName = basename(hookFile, ".sh");
-    const command = `bash $HOME/.claude/hooks/${hookFile}`;
+    const command = `bash ${hooksDir}/${hookFile}`;
 
     if (hookName === "block-main-commit") {
       hooks.PreToolUse!.push({

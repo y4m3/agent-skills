@@ -69,7 +69,9 @@ export const statusCommand = new Command("status")
         if (!component?.hasHooks) continue;
 
         const sourceHooksDir = join(component.path, "hooks");
-        const hookFiles = readdirSync(sourceHooksDir);
+        const hookFiles = readdirSync(sourceHooksDir).filter((f) =>
+          f.endsWith(".sh")
+        );
 
         for (const hookFile of hookFiles) {
           const destHookPath = join(hooksDir, hookFile);

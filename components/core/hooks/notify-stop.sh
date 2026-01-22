@@ -1,3 +1,4 @@
 #!/bin/bash
 # Wrapper for Stop hook - calls bell.sh with "Complete" message
-exec bash "$HOME/.claude/hooks/bell.sh" "Complete"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+exec bash "$script_dir/bell.sh" "Complete"
