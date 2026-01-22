@@ -247,12 +247,11 @@ export const syncCommand = new Command("sync")
         if (!component.hasRules) continue;
 
         const sourceRulesDir = join(component.path, "rules");
-        const ruleFiles = readdirSync(sourceRulesDir);
+        const ruleFiles = readdirSync(sourceRulesDir).filter(
+          (f) => f.endsWith(".md") && !f.endsWith(".local.md")
+        );
 
         for (const ruleFile of ruleFiles) {
-          // Skip .local.md files
-          if (ruleFile.endsWith(".local.md")) continue;
-
           const sourcePath = join(sourceRulesDir, ruleFile);
           const destPath = join(rulesDir, ruleFile);
 
