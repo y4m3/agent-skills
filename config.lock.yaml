@@ -1,0 +1,30 @@
+components:
+  core:
+    source_hash: 8e6558fb13c2
+    destinations:
+      ~/.claude:
+        hash: 8e6558fb13c2
+        status: synced
+        synced_at: 2026-01-22T04:10:02.888Z
+  linear-issue:
+    source_hash: d084a3bcb0f7
+    destinations:
+      ~/.claude:
+        hash: d084a3bcb0f7
+        status: synced
+        synced_at: 2026-01-22T04:10:02.888Z
+  start-work:
+    source_hash: b269e94b7d05
+    destinations:
+      ~/.claude:
+        hash: b269e94b7d05
+        status: synced
+        synced_at: 2026-01-22T04:10:02.889Z
+  pr-check:
+    source_hash: 174bde9fb86b
+    destinations:
+      ~/.claude:
+        hash: 174bde9fb86b
+        status: synced
+        synced_at: 2026-01-22T04:10:02.889Z
+global_hash: ""

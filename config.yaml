@@ -1,0 +1,21 @@
+# Agent Skills Configuration
+# This file defines which components to sync and where
+
+# Components to enable
+components:
+  - core
+  - linear-issue
+  - start-work
+  - pr-check
+
+# Destinations for syncing
+# Each destination will receive:
+# - skills/<name>/SKILL.md for each component with a SKILL.md
+# - hooks/* merged from all components
+# - rules/* merged from all components
+# - CLAUDE.md generated from template
+destinations:
+  - ~/.claude
+  # Add project-specific destinations as needed:
+  # - ~/repos/project-a/.claude
+  # - ~/repos/project-b/.claude

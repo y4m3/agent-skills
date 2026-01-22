@@ -1,4 +1,10 @@
-import { readFileSync, existsSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import {
+  readFileSync,
+  existsSync,
+  writeFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { homedir } from "node:os";
@@ -9,8 +15,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Types
-export interface SkillConfig {
-  [skillName: string]: string[] | undefined;
+export interface Config {
+  components: string[];
+  destinations: string[];
 }
 
 export interface DestinationStatus {
@@ -20,7 +27,7 @@ export interface DestinationStatus {
   pending_action?: "update" | "delete";
 }
 
-export interface SkillLockEntry {
+export interface ComponentLockEntry {
   source_hash: string;
   destinations: {
     [path: string]: DestinationStatus;
@@ -28,13 +35,19 @@ export interface SkillLockEntry {
 }
 
 export interface LockFile {
-  [skillName: string]: SkillLockEntry;
+  components: {
+    [componentName: string]: ComponentLockEntry;
+  };
+  global_hash: string;
 }
 
-export interface SkillInfo {
+export interface ComponentInfo {
   name: string;
   path: string;
   hasSkillMd: boolean;
+  hasHooks: boolean;
+  hasRules: boolean;
+  hasTemplates: boolean;
 }
 
 // Path utilities
@@ -43,16 +56,16 @@ export function getProjectRoot(): string {
   return resolve(__dirname, "..", "..", "..");
 }
 
-export function getSkillsSourceDir(): string {
-  return join(getProjectRoot(), "skills");
+export function getComponentsDir(): string {
+  return join(getProjectRoot(), "components");
 }
 
 export function getConfigPath(): string {
-  return join(getProjectRoot(), "skills.yaml");
+  return join(getProjectRoot(), "config.yaml");
 }
 
 export function getLockPath(): string {
-  return join(getProjectRoot(), "skills.lock.yaml");
+  return join(getProjectRoot(), "config.lock.yaml");
 }
 
 export function expandPath(path: string): string {
@@ -63,22 +76,38 @@ export function expandPath(path: string): string {
 }
 
 // Config file operations
-export function loadConfig(): SkillConfig {
+export function loadConfig(): Config {
   const configPath = getConfigPath();
   if (!existsSync(configPath)) {
-    return {};
+    return { components: [], destinations: [] };
   }
   const content = readFileSync(configPath, "utf-8");
-  return parseYaml(content) || {};
+  const parsedRaw = parseYaml(content);
+  const parsed =
+    parsedRaw && typeof parsedRaw === "object" ? (parsedRaw as any) : {};
+
+  const components = Array.isArray(parsed.components)
+    ? parsed.components.filter((item: unknown) => typeof item === "string")
+    : [];
+
+  const destinations = Array.isArray(parsed.destinations)
+    ? parsed.destinations.filter((item: unknown) => typeof item === "string")
+    : [];
+
+  return { components, destinations };
 }
 
 export function loadLockFile(): LockFile {
   const lockPath = getLockPath();
   if (!existsSync(lockPath)) {
-    return {};
+    return { components: {}, global_hash: "" };
   }
   const content = readFileSync(lockPath, "utf-8");
-  return parseYaml(content) || {};
+  const parsed = parseYaml(content) || {};
+  return {
+    components: parsed.components || {},
+    global_hash: parsed.global_hash || "",
+  };
 }
 
 export function saveLockFile(lock: LockFile): void {
@@ -86,34 +115,42 @@ export function saveLockFile(lock: LockFile): void {
   writeFileSync(lockPath, stringifyYaml(lock), "utf-8");
 }
 
-// Skill discovery
-export function listAvailableSkills(): SkillInfo[] {
-  const skillsDir = getSkillsSourceDir();
-  if (!existsSync(skillsDir)) {
+// Component discovery
+export function listAvailableComponents(): ComponentInfo[] {
+  const componentsDir = getComponentsDir();
+  if (!existsSync(componentsDir)) {
     return [];
   }
 
-  const entries = readdirSync(skillsDir);
-  const skills: SkillInfo[] = [];
+  const entries = readdirSync(componentsDir);
+  const components: ComponentInfo[] = [];
 
   for (const entry of entries) {
-    const entryPath = join(skillsDir, entry);
+    const entryPath = join(componentsDir, entry);
     const stat = statSync(entryPath);
     if (stat.isDirectory()) {
       const skillMdPath = join(entryPath, "SKILL.md");
-      skills.push({
+      const hooksPath = join(entryPath, "hooks");
+      const rulesPath = join(entryPath, "rules");
+      const templatesPath = join(entryPath, "templates");
+
+      components.push({
         name: entry,
         path: entryPath,
         hasSkillMd: existsSync(skillMdPath),
+        hasHooks: existsSync(hooksPath) && statSync(hooksPath).isDirectory(),
+        hasRules: existsSync(rulesPath) && statSync(rulesPath).isDirectory(),
+        hasTemplates:
+          existsSync(templatesPath) && statSync(templatesPath).isDirectory(),
       });
     }
   }
 
-  return skills;
+  return components;
 }
 
-export function getSkillSourcePath(skillName: string): string {
-  return join(getSkillsSourceDir(), skillName);
+export function getComponentPath(componentName: string): string {
+  return join(getComponentsDir(), componentName);
 }
 
 // Hash calculation
@@ -133,6 +170,14 @@ export function calculateDirectoryHash(dirPath: string): string {
   }
 
   return hash.digest("hex").substring(0, 12);
+}
+
+export function calculateFileHash(filePath: string): string {
+  if (!existsSync(filePath)) {
+    return "";
+  }
+  const content = readFileSync(filePath);
+  return createHash("sha256").update(content).digest("hex").substring(0, 12);
 }
 
 function getAllFiles(dirPath: string, files: string[] = []): string[] {
@@ -161,4 +206,13 @@ export function isGitManaged(path: string): boolean {
     current = dirname(current);
   }
   return false;
+}
+
+// Legacy compatibility - map to new structure
+export function listAvailableSkills(): ComponentInfo[] {
+  return listAvailableComponents().filter((c) => c.hasSkillMd);
+}
+
+export function getSkillSourcePath(skillName: string): string {
+  return getComponentPath(skillName);
 }

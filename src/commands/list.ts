@@ -1,32 +1,39 @@
 import { Command } from "commander";
-import { listAvailableSkills, loadConfig } from "../utils/config.js";
+import { listAvailableComponents, loadConfig } from "../utils/config.js";
 
 export const listCommand = new Command("list")
-  .description("List available skills")
+  .description("List available components")
   .action(() => {
-    const skills = listAvailableSkills();
+    const components = listAvailableComponents();
     const config = loadConfig();
 
-    if (skills.length === 0) {
-      console.log("No skills found in skills/ directory");
+    if (components.length === 0) {
+      console.log("No components found in components/ directory");
       return;
     }
 
-    console.log("Available skills:\n");
-    console.log("  Name          Valid    Configured");
-    console.log("  ─────────────────────────────────────");
+    console.log("Available components:\n");
+    console.log("  Name           Skill  Hooks  Rules  Enabled");
+    console.log("  ─────────────────────────────────────────────");
 
-    for (const skill of skills) {
-      const isValid = skill.hasSkillMd ? "✓" : "✗";
-      const destinations = config[skill.name];
-      const configStatus = destinations && destinations.length > 0
-        ? `${destinations.length} destination(s)`
-        : "-";
+    for (const component of components) {
+      const hasSkill = component.hasSkillMd ? "✓" : "-";
+      const hasHooks = component.hasHooks ? "✓" : "-";
+      const hasRules = component.hasRules ? "✓" : "-";
+      const isEnabled = config.components.includes(component.name) ? "✓" : "-";
 
       console.log(
-        `  ${skill.name.padEnd(14)} ${isValid.padEnd(8)} ${configStatus}`
+        `  ${component.name.padEnd(14)} ${hasSkill.padEnd(6)} ${hasHooks.padEnd(6)} ${hasRules.padEnd(6)} ${isEnabled}`
       );
     }
 
     console.log("");
+
+    if (config.destinations.length > 0) {
+      console.log("Configured destinations:");
+      for (const dest of config.destinations) {
+        console.log(`  - ${dest}`);
+      }
+      console.log("");
+    }
   });
